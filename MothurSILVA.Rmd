@@ -1,0 +1,126 @@
+---
+title: "MICRBIOL 612.2 Capstone Project Codes"
+author: "Ali Mirza"
+date: "April 28, 2016"
+output: html_document
+---
+
+
+```
+./mothur stability.batch
+mothur > system(mv stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.an.unique_list.shared stability.an.shared)
+mothur > system(mv stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.an.unique_list.0.03.cons.taxonomy stability.an.cons.taxonomy)
+```
+###### smallest sample had 2439 sequences in it
+```
+mothur > sub.sample(shared=stability.an.shared, size=2439)
+mothur > rarefaction.single(shared=stability.an.shared, calc=sobs, freq=100)
+mothur > summary.single(shared=stability.an.shared, calc=nseqs-coverage-sobs-invsimpson, subsample=2439)
+mothur > heatmap.bin(shared=stability.an.0.03.subsample.shared, scale=log2, numotu=50) 
+mothur > dist.shared(shared=stability.an.shared, calc=thetayc-jclass, subsample=2439)
+mothur > heatmap.sim(phylip=stability.an.thetayc.0.03.lt.ave.dist)
+mothur > heatmap.sim(phylip=stability.an.jclass.0.03.lt.ave.dist)
+mothur > venn(shared=stability.an.0.03.subsample.shared, groups=F3D0-F3D1-F3D2-F3D3)
+mothur > tree.shared(phylip=stability.an.thetayc.0.03.lt.ave.dist)
+mothur > parsimony(tree=stability.an.thetayc.0.03.lt.ave.tre, group=mouse.time.design,  groups=all)
+```
+###### parsimony significane is <0.001
+```
+mothur > pcoa(phylip=stability.an.thetayc.0.03.lt.ave.dist)
+```
+###### Rsq 1 axis: 0.7396
+###### Rsq 2 axis: 0.886652
+###### Rsq 3 axis: 0.977554
+```
+mothur > nmds(phylip=stability.an.thetayc.0.03.lt.ave.dist)
+```
+###### Number of dimensions:	2
+###### Lowest stress :	0.112803
+###### R-squared for configuration:	0.948404
+```
+mothur > nmds(phylip=stability.an.thetayc.0.03.lt.ave.dist, mindim=3, maxdim=3)
+```
+###### Number of dimensions:	3
+###### Lowest stress :	0.0470108
+###### R-squared for configuration:	0.989395
+```
+mothur > amova(phylip=stability.an.thetayc.0.03.lt.ave.dist, design=mouse.time.design)
+```
+###### p-value: <0.001*
+```
+mothur > homova(phylip=stability.an.thetayc.0.03.lt.ave.dist, design=mouse.time.design)
+```
+###### p-value: <0.001*
+###### SSwithin/(Ni-1)_values: 0.0596273	0.00767229
+```
+mothur > corr.axes(axes=stability.an.thetayc.0.03.lt.ave.nmds.axes, shared=stability.an.0.03.subsample.shared, method=spearman, numaxes=3)
+mothur > corr.axes(axes=stability.an.thetayc.0.03.lt.ave.nmds.axes, metadata=mouse.dpw.metadata, method=spearman, numaxes=3)
+mothur > get.communitytype(shared=stability.an.0.03.subsample.shared)
+mothur > metastats(shared=stability.an.0.03.subsample.shared, design=mouse.time.design)
+mothur > lefse(shared=stability.an.0.03.subsample.shared, design=mouse.time.design)
+mothur > indicator(shared=stability.an.0.03.subsample.shared, design=mouse.time.design)
+mothur > classify.rf(shared=stability.an.0.03.subsample.shared, design=mouse.time.design)
+mothur > phylo.diversity(tree=stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.phylip.tre, count=stability.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.pick.count_table, rarefy=T)
+mothur > unifrac.unweighted(tree=stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.phylip.tre, count=stability.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.pick.count_table, distance=lt, processors=2, random=F, subsample=2439)
+mothur > unifrac.weighted(tree=stability.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.phylip.tre, count=stability.trim.contigs.good.unique.good.filter.unique.precluster.denovo.uchime.pick.pick.pick.count_table, distance=lt, processors=2, random=F, subsample=2439)
+```
+
+## Rarefraction curve
+```{r rarefraction}
+rf=read.csv("stability.an.groups.rarefaction", header=T, sep="\t", check.names=FALSE)
+rf_ave=rf[, -grep("ci", colnames(rf))]
+library("reshape2")
+rf_ave_melt=melt(rf_ave, id.var = "numsampled", variable.name = "samples")
+library("ggplot2")
+ggplot(data=rf_ave_melt, aes(x=numsampled, y=value, group = samples, color=samples)) +
+  geom_line() +
+  geom_point()
+```
+
+## PCOA Plot
+```{r PCOA}
+pcoa=read.csv("stability.an.thetayc.0.03.lt.ave.pcoa.axes", header=T, sep="\t", check.names=FALSE)
+early_late = c("E", "E", "L", "L", "L", "L", "L", "L", "L", "L", "L", "L", "E", "E", "E", "E", "E", "E", "E")
+ggplot(pcoa, aes(x = axis1, y = axis2, colour=early_late)) + geom_point()
+```
+
+## NMDS Plot
+```{r NMDS}
+library("rgl")
+nmds=read.csv("stability.an.thetayc.0.03.lt.ave.nmds.axes", header=T, sep="\t", check.names=FALSE)
+plot3d(nmds[,-1], type="s", col=c("red", "blue", "green"))
+```
+![Caption for the picture.](/home/ali/Downloads/3Dplot.png)
+
+
+## Dot plot of OTUs with only adjusted P values < 0.05
+
+```{r OTU setup}
+pv=read.csv("stability.an.0.03.subsample.shared", header=T, sep="\t", check.names=FALSE)
+pv$label= early_late
+pv_sort = pv[order(pv$label),]
+row.names(pv_sort) = pv_sort$Group
+drop = c("label", "numOtus", "Group")
+pv_sort_clean=pv_sort[ , !(names(pv_sort) %in% drop)]
+dim(pv_sort_clean) #number of OTUs are 320
+
+pval=NULL
+for (j in 1:320)
+{
+  test=t.test(pv_sort_clean[1:9,j],pv_sort_clean[10:19,j])
+  pval=c(pval,test$p.value)  
+}
+
+bac=which(pval<=0.05)
+adj=round(p.adjust(pval, "fdr"), 3)
+adj_pvalues=which(adj<=0.05)
+```
+###### now lets make a df with only adjusted P values <=0.05
+```{r OTU plot}
+SigOTUs=colnames(pv_sort_clean)[adj_pvalues]
+keep = c("label", "Group", SigOTUs)
+df1=pv[,keep]
+df2=melt(df1,id.var=c("label","Group"))
+ggplot(df2, aes(x=label, y=value, fill=label)) +
+  geom_boxplot() + facet_wrap(~variable)
+```
